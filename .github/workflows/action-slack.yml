@@ -10,13 +10,23 @@ jobs:
       - name: Gather Assigned Users
         # get channel id based on assigned users
         run: |
-          echo "CHANNEL_ID=$(curl -s -X POST -H 'Content-type: application/json' --data '{"token": "'${{ secrets.SLACK_BOT_TOKEN }}'", "users": "'${{ join(github.event.issue.assignees.*.login, ', ') }}'"}' https://slack.com/api/users.conversations | jq -r '.channels[0].id')" >> $GITHUB_ENV
+          CHANNELS = ()
+          for i in ${{ github.event.issue.assignees.*.login }}; do
+            if [ "$i" == "Mutad" ]; then
+              CHANNELS += 'U04KL38250R'
+            elif [ "$i" == "user2" ]; then
+              CHANNELS += 'U04KL38250R'
+            elif [ "$i" == "user3" ]; then
+              CHANNELS += 'U04KL38250R'
+            endif
+          done
+          CHANNEL_ID = join(CHANNELS, ', ')
       - name: Slack Notification
         uses: slackapi/slack-github-action@v1.24.0
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
         with:
-          channel-id: 'U04KL38250R'
+          channel-id: ${{ env.CHANNEL_ID }}
           payload: |
             {
               "unfurl_links": false,
