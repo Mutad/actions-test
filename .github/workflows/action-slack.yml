@@ -9,6 +9,7 @@ jobs:
       username_to_channel_id: ${{ vars.USERNAME_TO_CHANNEL_ID }}
     steps:
       - name: Gather Assigned Users
+        id: assignees
         # get channel id based on assigned users
         run: |
           CHANNELS=()
@@ -37,7 +38,7 @@ jobs:
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
         with:
-          channel-id: ${{ env.CHANNELS }}
+          channel-id: ${{ steps.assignees.outputs.CHANNELS }}
           payload: |
             {
               "unfurl_links": false,
