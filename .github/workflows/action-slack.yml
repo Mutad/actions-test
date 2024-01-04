@@ -25,7 +25,7 @@ jobs:
           done
           # join channels with comma
           CHANNELS=$(IFS=, ; echo "${CHANNELS[*]}")
-          echo "CHANNELS: $CHANNELS" >> $GITHUB_OUTPUT
+          echo "CHANNELS=$CHANNELS" >> $GITHUB_OUTPUT
       - name: Slack Notification
         uses: slackapi/slack-github-action@v1.24.0
         env:
