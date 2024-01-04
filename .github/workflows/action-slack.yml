@@ -5,16 +5,18 @@ on:
 jobs:
   slack:
     runs-on: ubuntu-latest
+    env:
+      username_to_channel_id: ${{ vars.USERNAME_TO_CHANNEL_ID }}
     steps:
       - name: Gather Assigned Users
         # get channel id based on assigned users
         run: |
           CHANNELS=()
           echo "Assignees: ${{ join(github.event.issue.assignees.*.login, ', ') }}"
-          echo "USERNAME_TO_CHANNEL_ID: ${{ env.USERNAME_TO_CHANNEL_ID }}"
+          echo "USERNAME_TO_CHANNEL_ID: $username_to_channel_id"
           for i in ${{ join(github.event.issue.assignees.*.login, ' ') }}; do
             echo "Assignee: $i"
-            for j in ${{ env.USERNAME_TO_CHANNEL_ID }}; do
+            for j in $username_to_channel_id; do
               # USERNAME=CHANNEL_ID
               USERNAME=$(echo $j | cut -d'=' -f1)
               CHANNEL_ID=$(echo $j | cut -d'=' -f2)
