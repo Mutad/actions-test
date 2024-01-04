@@ -2,7 +2,6 @@ name: Critical Issue Created
 on:
   issues:
     types: [opened, reopened]
-  workflow_dispatch:
 jobs:
   slack:
     runs-on: ubuntu-latest
@@ -12,13 +11,17 @@ jobs:
         run: |
           CHANNELS=()
           echo "Assignees: ${{ join(github.event.issue.assignees.*.login, ', ') }}"
+          echo "USERNAME_TO_CHANNEL_ID: ${{ env.USERNAME_TO_CHANNEL_ID }}"
           for i in ${{ join(github.event.issue.assignees.*.login, ' ') }}; do
             echo "Assignee: $i"
             for j in ${{ env.USERNAME_TO_CHANNEL_ID }}; do
-              echo "Username: $j"
-              if [[ $i == $j ]]; then
-                echo "Matched: $i"
-                CHANNELS+=(${{ env.USERNAME_TO_CHANNEL_ID[$j] }})
+              # USERNAME=CHANNEL_ID
+              USERNAME=$(echo $j | cut -d'=' -f1)
+              CHANNEL_ID=$(echo $j | cut -d'=' -f2)
+              echo "USERNAME: $USERNAME"
+              echo "CHANNEL_ID: $CHANNEL_ID"
+              if [ "$i" == "$USERNAME" ]; then
+                CHANNELS+=($CHANNEL_ID)
               fi
             done
           done
