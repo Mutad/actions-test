@@ -7,6 +7,10 @@ jobs:
   slack:
     runs-on: ubuntu-latest
     steps:
+      - name: Gather Assigned Users
+        # get channel id based on assigned users
+        run: |
+          echo "CHANNEL_ID=$(curl -s -X POST -H 'Content-type: application/json' --data '{"token": "'${{ secrets.SLACK_BOT_TOKEN }}'", "users": "'${{ join(github.event.issue.assignees.*.login, ', ') }}'"}' https://slack.com/api/users.conversations | jq -r '.channels[0].id')" >> $GITHUB_ENV
       - name: Slack Notification
         uses: slackapi/slack-github-action@v1.24.0
         env:
@@ -34,20 +38,20 @@ jobs:
                     },
                     {
                       "type": "mrkdwn",
+                      "text": "*Repository:*\n<${{ github.event.repository.html_url }}|${{ github.event.repository.full_name }}>"
+                    },
+                    {
+                      "type": "mrkdwn",
                       "text": "*Opened By:*\n<${{ github.event.issue.user.html_url }}|${{ github.event.issue.user.login }}>"
                     },
                     {
                       "type": "mrkdwn",
-                      "text": "*Repository:*\n<${{ github.event.repository.html_url }}|${{ github.event.repository.full_name }}>"
+                      "text": "*Assignees:*\n${{ join(github.event.issue.assignees.*.login, ', ') }}"
                     },
                     {
                       "type": "mrkdwn",
                       "text": "*Labels:*\n${{ join(github.event.issue.labels.*.name, ', ') }}"
                     },
-                    {
-                      "type": "mrkdwn",
-                      "text": "*Assignees:*\n${{ join(github.event.issue.assignees.*.login, ', ') }}"
-                    }
                   ]
                 },
                 {
