@@ -28,15 +28,21 @@ jobs:
                   "fields": [
                     {
                       "type": "mrkdwn",
-                      "text": "*Issue:*\n<${{ github.event.issue.html_url }}|${{ github.event.issue.title }}>"
+                      "text": "*Issue:*\n<${{ github.event.issue.html_url }}|${{ github.event.issue.title }}>",
+                      "unfurl_links": true,
+                      "unfurl_media": true
                     },
                     {
                       "type": "mrkdwn",
-                      "text": "*Opened By:*\n<${{ github.event.issue.user.html_url }}|${{ github.event.issue.user.login }}>"
+                      "text": "*Opened By:*\n<${{ github.event.issue.user.html_url }}|${{ github.event.issue.user.login }}>",
+                      "unfurl_links": true,
+                      "unfurl_media": true
                     },
                     {
                       "type": "mrkdwn",
-                      "text": "*Repository:*\n<${{ github.event.repository.html_url }}|${{ github.event.repository.full_name }}>"
+                      "text": "*Repository:*\n<${{ github.event.repository.html_url }}|${{ github.event.repository.full_name }}>",
+                      "unfurl_links": true,
+                      "unfurl_media": true
                     }
                   ]
                 },
