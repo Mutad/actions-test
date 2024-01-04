@@ -1,0 +1,16 @@
+name: Critical Issue Created
+on:
+  issues:
+    types: [opened, reopened]
+  workflow_dispatch:
+jobs:
+  slack:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Slack Notification
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          channel-id: 'D04K4FN0C5T'
+          slack-message: 'Hello world!'
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
