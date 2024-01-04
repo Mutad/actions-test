@@ -23,11 +23,12 @@ jobs:
               echo "USERNAME: $USERNAME"
               echo "CHANNEL_ID: $CHANNEL_ID"
               if [ "$i" == "$USERNAME" ]; then
+                echo "Match $i to $USERNAME to $CHANNEL_ID"
                 CHANNELS+=($CHANNEL_ID)
               fi
             done
           done
-          CHANNEL_ID=$(IFS=,; echo "${CHANNELS[*]}")
+          CHANNEL_ID=$(echo "${CHANNELS[@]}" | sed 's/ /,/g')
           echo "CHANNEL_ID: $CHANNEL_ID"
       - name: Slack Notification
         uses: slackapi/slack-github-action@v1.24.0
