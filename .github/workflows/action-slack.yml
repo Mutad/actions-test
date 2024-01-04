@@ -30,15 +30,15 @@ jobs:
                   "fields": [
                     {
                       "type": "mrkdwn",
-                      "text": "*Issue:*\n<${{ github.event.issue.html_url }}|${{ github.event.issue.title }}>",
+                      "text": "*Issue:*\n<${{ github.event.issue.html_url }}|${{ github.event.issue.title }}>"
                     },
                     {
                       "type": "mrkdwn",
-                      "text": "*Opened By:*\n<${{ github.event.issue.user.html_url }}|${{ github.event.issue.user.login }}>",
+                      "text": "*Opened By:*\n<${{ github.event.issue.user.html_url }}|${{ github.event.issue.user.login }}>"
                     },
                     {
                       "type": "mrkdwn",
-                      "text": "*Repository:*\n<${{ github.event.repository.html_url }}|${{ github.event.repository.full_name }}>",
+                      "text": "*Repository:*\n<${{ github.event.repository.html_url }}|${{ github.event.repository.full_name }}>"
                     }
                   ]
                 },
