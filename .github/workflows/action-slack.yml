@@ -10,16 +10,16 @@ jobs:
       - name: Gather Assigned Users
         # get channel id based on assigned users
         run: |
-          CHANNELS = ()
-          for i in ${{ github.event.issue.assignees.*.login }}; do
-            if [ "$i" == "Mutad" ]; then
-              CHANNELS += 'U04KL38250R'
-            elif [ "$i" == "user2" ]; then
-              CHANNELS += 'U04KL38250R'
-            elif [ "$i" == "user3" ]; then
-              CHANNELS += 'U04KL38250R'
-            endif
-          done
+          CHANNELS = () \
+          for i in ${{ github.event.issue.assignees.*.login }}; do \
+            if [ "$i" == "Mutad" ]; then \
+              CHANNELS += 'U04KL38250R' \
+            elif [ "$i" == "user2" ]; then \
+              CHANNELS += 'U04KL38250R' \
+            elif [ "$i" == "user3" ]; then \
+              CHANNELS += 'U04KL38250R' \
+            endif \
+          done \
           CHANNEL_ID = join(CHANNELS, ', ')
       - name: Slack Notification
         uses: slackapi/slack-github-action@v1.24.0
