@@ -12,6 +12,7 @@ jobs:
         run: |
           CHANNELS=()
           for i in ${{ github.event.issue.assignees.*.login }}; do
+            echo "Assignee: $i"
             if [ "$i" == "Mutad" ]; then
               CHANNELS+=('U04KL38250R')
             elif [ "$i" == "user2" ]; then
@@ -27,7 +28,7 @@ jobs:
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
         with:
-          channel-id: ${{ env.CHANNEL_ID }}
+          channel-id: 'U04KL38250R'
           payload: |
             {
               "unfurl_links": false,
