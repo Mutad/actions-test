@@ -39,6 +39,14 @@ jobs:
                     {
                       "type": "mrkdwn",
                       "text": "*Repository:*\n<${{ github.event.repository.html_url }}|${{ github.event.repository.full_name }}>"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Labels:*\n${{ join(github.event.issue.labels.*.name, ', ') }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Assignees:*\n${{ join(github.event.issue.assignees.*.login, ', ') }}"
                     }
                   ]
                 },
