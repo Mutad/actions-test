@@ -29,8 +29,9 @@ jobs:
             done
           done
           echo "CHANNELS: ${CHANNELS[@]}"
-          CHANNEL_ID=$(echo "${CHANNELS[@]}" | sed 's/ /,/g')
-          echo "CHANNEL_ID: $CHANNEL_ID"
+          # join channels with comma
+          CHANNELS=$(IFS=, ; echo "${CHANNELS[*]}")
+          echo "CHANNELS: $CHANNELS"
       - name: Slack Notification
         uses: slackapi/slack-github-action@v1.24.0
         env:
