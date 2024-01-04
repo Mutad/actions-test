@@ -51,7 +51,7 @@ jobs:
                     {
                       "type": "mrkdwn",
                       "text": "*Labels:*\n${{ join(github.event.issue.labels.*.name, ', ') }}"
-                    },
+                    }
                   ]
                 },
                 {
