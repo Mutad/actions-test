@@ -13,26 +13,19 @@ jobs:
         # get channel id based on assigned users
         run: |
           CHANNELS=()
-          echo "Assignees: ${{ join(github.event.issue.assignees.*.login, ', ') }}"
-          echo "USERNAME_TO_CHANNEL_ID: $username_to_channel_id"
           for i in ${{ join(github.event.issue.assignees.*.login, ' ') }}; do
-            echo "Assignee: $i"
             for j in $username_to_channel_id; do
               # USERNAME=CHANNEL_ID
               USERNAME=$(echo $j | cut -d'=' -f1)
               CHANNEL_ID=$(echo $j | cut -d'=' -f2)
-              echo "USERNAME: $USERNAME"
-              echo "CHANNEL_ID: $CHANNEL_ID"
               if [ "$i" == "$USERNAME" ]; then
-                echo "Match $i to $USERNAME to $CHANNEL_ID"
                 CHANNELS+=($CHANNEL_ID)
               fi
             done
           done
-          echo "CHANNELS: ${CHANNELS[@]}"
           # join channels with comma
           CHANNELS=$(IFS=, ; echo "${CHANNELS[*]}")
-          echo "CHANNELS: $CHANNELS"
+          echo "CHANNELS: $CHANNELS" >> $GITHUB_OUTPUT
       - name: Slack Notification
         uses: slackapi/slack-github-action@v1.24.0
         env:
