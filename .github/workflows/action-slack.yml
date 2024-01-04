@@ -11,6 +11,7 @@ jobs:
         # get channel id based on assigned users
         run: |
           CHANNELS=()
+          echo "Assignees: ${{ join(github.event.issue.assignees.*.login, ', ') }}"
           for i in ${{ github.event.issue.assignees.*.login }}; do
             echo "Assignee: $i"
             if [ "$i" == "Mutad" ]; then
