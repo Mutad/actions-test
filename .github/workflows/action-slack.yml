@@ -37,7 +37,7 @@ jobs:
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
         with:
-          channel-id: 'U04KL38250R'
+          channel-id: ${{ env.CHANNELS }}
           payload: |
             {
               "unfurl_links": false,
