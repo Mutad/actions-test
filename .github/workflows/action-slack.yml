@@ -28,6 +28,7 @@ jobs:
               fi
             done
           done
+          echo "CHANNELS: ${CHANNELS[@]}"
           CHANNEL_ID=$(echo "${CHANNELS[@]}" | sed 's/ /,/g')
           echo "CHANNEL_ID: $CHANNEL_ID"
       - name: Slack Notification
