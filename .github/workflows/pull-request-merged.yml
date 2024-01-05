@@ -26,7 +26,7 @@ jobs:
 
           issues="$( gh api graphql -f query='
           query {
-            node (id: $PR_ID) {
+            node (id: "'$PR_ID'") {
               ... on PullRequest {
                 closingIssuesReferences(first: 10) {
                   edges {
@@ -55,6 +55,6 @@ jobs:
                 }
               }
             }
-          }' -f id=$PR_ID --jq '.data.node.closingIssuesReferences.edges[]')"
+          }' --jq '.data.node.closingIssuesReferences.edges[]')"
           echo "Issues: $issues"
 
