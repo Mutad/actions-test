@@ -66,7 +66,10 @@ jobs:
         shell: python
         run: |
           import requests
-          headers = {"Authorization": "Bearer ${{ GH_TOKEN }}"} # Define our query
+          import os
+
+          token = os.environ['GH_TOKEN']
+          headers = {"Authorization": "Bearer " + token}
           def run_query(query): # A simple function to use requests.post to make the API call. Note the json= section.
             request = requests.post('https://api.github.com/graphql', json={'query': query}, headers=headers)
             if request.status_code == 200:
