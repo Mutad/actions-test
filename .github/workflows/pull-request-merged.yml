@@ -11,9 +11,12 @@ jobs:
   move-issue-card:
     # only run if PR is merged and target branch is staging
     # if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'staging'
+
+    # give the workflow access to the projectv2 API
     permissions:
       issues: write
-      repository-projects: write
+      projects: write
+      
     runs-on: ubuntu-latest
     steps:
       - name: Gather Cards
