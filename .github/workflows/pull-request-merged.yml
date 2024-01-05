@@ -1,0 +1,19 @@
+name: Pull Request Merged
+on:
+  pull_request:
+    types: [closed]
+jobs:
+  if-merged:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Checkout'
+        uses: actions/checkout@v2
+      - name: 'Get Linked Issues'
+        id: linked-issues
+        uses: kin/gh-action-get-linked-issues@v1.0
+        with:
+          access-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: 'Log Linked Issues'
+        run: |
+          echo "Linked Issues: ${{ steps.linked-issues.outputs.linked-issues }}"
