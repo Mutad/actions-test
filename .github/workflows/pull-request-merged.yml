@@ -51,7 +51,7 @@ jobs:
 
             # get the project card ID associated with the issue
             project_card_id="$( gh api graphql -f query='
-            query ($number: Int!) {
+            query ($number: ID!) {
               repository(owner: "${{github.repository_owner}}", name: "${{github.event.repository.name}}") {
                 issue(number: $number) {
                   projectCards(first: 100) {
