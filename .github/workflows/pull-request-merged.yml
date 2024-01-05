@@ -61,7 +61,7 @@ jobs:
                   }
                 }
               }
-            }' -f number="11" --jq '.data.repository.issue.projectCards.nodes[].id')"
+            }' -F number=$ISSUE_ID --jq '.data.repository.issue.projectCards.nodes[].id')"
 
             echo "Project Card ID: $project_card_id"
 
