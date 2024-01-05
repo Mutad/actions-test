@@ -7,6 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       username_to_channel_id: ${{ vars.USERNAME_TO_CHANNEL_ID }}
+      issues_channel_id: ${{ secrets.ISSUES_CHANNEL_ID }}
     steps:
       - name: Gather Assigned Users
         id: assignees
@@ -23,6 +24,11 @@ jobs:
               fi
             done
           done
+          # if no channels found, use default channel
+          if [ ${#CHANNELS[@]} -eq 0 ]; then
+            CHANNELS+=($issues_channel_id)
+            echo "No channels found for assignees, or no assignees. Using default channel."
+          fi
           # join channels with comma
           CHANNELS=$(IFS=, ; echo "${CHANNELS[*]}")
           echo "CHANNELS=$CHANNELS" >> $GITHUB_OUTPUT
