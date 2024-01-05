@@ -13,22 +13,20 @@ jobs:
           PR_ID: ${{ github.event.pull_request.node_id }}
         run: |
           linked_issue_id="$( gh api graphql -f query='
-          query($pr:ID!) {
-            node(id: $pr) {
+          query ($id: ID!) {
+            node(id: $id) {
               ... on PullRequest {
-                closingIssuesReferences(first:1, userLinkedOnly:false) {
-                  totalCount
-                  nodes { 
-                    id 
-                    projectItems(first: 5) {
-                      nodes {
-                        id
+                timelineItems(first: 100, itemTypes: [CONNECTED_EVENT]) {
+                  nodes {
+                    ... on ConnectedEvent {
+                      subject {
+                         ... on Issue { number }
                       }
                     }
                   }
                 }
               }
             }
-          }' -f pr=$PR_ID --jq '.data.node.closingIssuesReferences.nodes[0].projectItems.nodes[0].id')"
+          }' -f id=$PR_ID --jq '.data.node.timelineItems.nodes[].subject.number')"
           echo "Linked issue id: $linked_issue_id"
           echo "PR id: $PR_ID"
