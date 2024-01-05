@@ -19,10 +19,17 @@ jobs:
       
     runs-on: ubuntu-latest
     steps:
+      - name: Generate token
+        id: generate-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app_id: 784960
+          private_key: f2412a38b697361b3c64f60b73ee5bcfa4179706
+
       - name: Gather Cards
         id: gather-cards
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
           PR_ID: ${{ github.event.pull_request.node_id }}
           INPUT_PR_ID: ${{ github.event.inputs.pr_id }}
         run: |
