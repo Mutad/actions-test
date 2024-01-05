@@ -16,4 +16,4 @@ jobs:
           access-token: ${{ secrets.GITHUB_TOKEN }}
       - name: 'Log Linked Issues'
         run: |
-          echo "Linked Issues: ${{ steps.linked-issues.outputs.linked-issues }}"
+          echo "Linked Issues: ${{ steps.linked-issues.outputs.issues }}"
