@@ -10,6 +10,9 @@ on:
 jobs:
   move-issue-card:
     #if: github.event.pull_request.merged == true
+    permissions:
+      issues: write
+      repository-projects: write
     runs-on: ubuntu-latest
     steps:
       - name: Gather Cards
