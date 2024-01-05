@@ -38,7 +38,11 @@ jobs:
             }
           }' -f id=$PR_ID --jq '.data.node.timelineItems.nodes[].subject.number')"
 
+          echo "Linked Issue IDs: $linked_issue_ids"
+
           for ISSUE_ID in $linked_issue_ids; do
+            echo "Issue ID: $ISSUE_ID"
+
             # get the project card ID associated with the issue
             project_card_id="$( gh api graphql -f query='
             query ($number: Int!) {
@@ -53,7 +57,7 @@ jobs:
               }
             }' -f number=$ISSUE_ID --jq '.data.repository.issue.projectCards.nodes[].id')"
 
-            echo "project_card_id=$project_card_id" >> $GITHUB_OUTPUT
+            echo "Project Card ID: $project_card_id"
 
             if [ -z "$project_card_id" ]; then
               echo "No project card found for issue $ISSUE_ID"
