@@ -2,6 +2,11 @@ name: Pull Request Merged
 on:
   pull_request:
     types: [closed]
+  workflow_dispatch:
+    inputs:
+      pr_id:
+        description: 'Pull Request ID'
+        required: true
 jobs:
   close-issue:
     if: github.event.pull_request.merged == true
