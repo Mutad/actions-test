@@ -18,9 +18,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_ID: ${{ github.event.pull_request.node_id }}
         run: |
-          # Note: i'm not sure if this is the best way to get the linked issue id
-          # but it works for now
-          # Returns array of linked issues ids "1 2 3"
+          echo "PR ID: $PR_ID"
           linked_issue_ids="$( gh api graphql -f query='
           query ($id: ID!) {
             node(id: $id) {
@@ -70,16 +68,29 @@ jobs:
               continue
             fi
 
+            # get project associated with the project card
+            project_id="$( gh api graphql -f query='
+            query ($id: ID!) {
+              node(id: $id) {
+                ... on ProjectCard {
+                  project {
+                    id
+                  }
+                }
+              }
+            }' -F id=$project_card_id --jq '.data.node.project.id')"
+
+
             column_id=19726775
-            # convert the numberic column id to node id
+            # get column node id from column id
             column_id="$( gh api graphql -f query='
             query ($id: ID!) {
               node(id: $id) {
                 ... on ProjectColumn {
-                  id
+                  databaseId
                 }
               }
-            }' -F id=$column_id --jq '.data.node.id')"
+            }' -F id=$column_id --jq '.data.node.databaseId')"
             echo "Column ID: $column_id"
 
             # move the project card to the "Done" column
