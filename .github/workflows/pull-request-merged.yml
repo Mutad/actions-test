@@ -15,7 +15,7 @@ jobs:
     # give the workflow access to the projectv2 API
     permissions:
       issues: write
-      projects: write
+      repository-projects: write
       
     runs-on: ubuntu-latest
     steps:
