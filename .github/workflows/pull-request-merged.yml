@@ -71,15 +71,15 @@ jobs:
             else:
                 raise Exception("Query failed to run by returning code of {}. {}".format(request.status_code, query))
           issues = ${{ steps.gather-cards.outputs.issues }}
-          foreach issue in issues:
+          for issue in issues:
             issue_id = issue.node.id
             print("Found linked issue: " + issue_id)
-            foreach projectCard in issue.node.projectCards.nodes:
+            for projectCard in issue.node.projectCards.nodes:
               project_id = projectCard.project.id
               project_name = projectCard.project.name
               print("Issue linked to project: " + project_name)
               # find the column named "Done"
-              foreach column in projectCard.project.columns.nodes:
+              for column in projectCard.project.columns.nodes:
                 if column.name == "Done":
                   column_id = column.id
                   column_db_id = column.databaseId
