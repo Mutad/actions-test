@@ -24,27 +24,39 @@ jobs:
           fi
 
           issues="$( gh api graphql -f query='
-          query {
-            node (id: "'$PR_ID'") {
+          {
+            node(id: "PR_kwDOLA1oXM5jWBUr") {
               ... on PullRequest {
                 closingIssuesReferences(first: 10) {
                   edges {
                     node {
                       ... on Issue {
                         id
-                        projectCards(first: 100) {
-                          nodes {
-                            ... on ProjectCard {
-                              id
+                        number
+                        projectItems(last: 100) {
+                          edges {
+                            node {
                               project {
                                 id
-                                name
-                                columns (first: 100) {
-                                  nodes {
-                                    id
-                                    databaseId
-                                    name
+                                field(name: "Status") {
+                                  ... on ProjectV2SingleSelectField {
+                                    options(names: "Staging") {
+                                      id
+                                      name
+                                    }
                                   }
+                                }
+                              }
+                              id
+                              title: fieldValueByName(name: "Title") {
+                                ... on ProjectV2ItemFieldTextValue {
+                                  text
+                                }
+                              }
+                              status: fieldValueByName(name: "Status") {
+                                ... on ProjectV2ItemFieldSingleSelectValue {
+                                  id
+                                  optionId
                                 }
                               }
                             }
@@ -79,24 +91,42 @@ jobs:
           for issue in issues:
             issue_id = issue["node"]["id"]
             print("Found linked issue: " + issue_id)
-            for projectCard in issue["node"]["projectCards"]["nodes"]:
-              project_id = projectCard["project"]["id"]
-              project_name = projectCard["project"]["name"]
+            for projectItem in issue["node"]["projectItems"]["edges"]:
+              project_id = projectItem["node"]["project"]["id"]
+              project_name = projectCard["node"]["project"]["title"]
+              field_value_id = projectItem["node"]["project"]["field"]["options"][0]["id"]
               print("Issue linked to project: " + project_name)
-              # find the column named "Done"
-              for column in projectCard["project"]["columns"]["nodes"]:
-                if column["name"] == "Done":
-                  column_id = column["id"]
-                  column_db_id = column["databaseId"]
-                  print("Moving card to column: " + column["name"] + " " + column_id)
-                  # move the card to the "Done" column
-                  query = """
-                  mutation {
-                      moveProjectCard(input: {cardId: "%s" columnId: "%s"}) {
-                      clientMutationId
+              item_id = projectItem["node"]["id"]
+              item_field_id = projectItem["node"]["status"]["id"]
+
+              # update the project item field value
+              query = """
+              mutation {
+                updateProjectV2ItemFieldValue(
+                  input: {
+                    projectId: "%s"
+                    itemId: "%s"
+                    fieldId: "%s"
+                    value: {
+                      singleSelectOptionId: "%s"
                     }
                   }
-                  """ % (projectCard["id"], column_id)
-                  print("Query: " + query)
-                  result = run_query(query) # Execute the query
-                  print("Result: " + str(result))
+                )
+              }
+              """ % (project_id, item_id, item_field_id, field_value_id)
+              # for column in projectCard["project"]["columns"]["nodes"]:
+              #   if column["name"] == "Done":
+              #     column_id = column["id"]
+              #     column_db_id = column["databaseId"]
+              #     print("Moving card to column: " + column["name"] + " " + column_id)
+              #     # move the card to the "Done" column
+              #     query = """
+              #     mutation {
+              #         moveProjectCard(input: {cardId: "%s" columnId: "%s"}) {
+              #         clientMutationId
+              #       }
+              #     }
+              #     """ % (projectCard["id"], column_id)
+              #     print("Query: " + query)
+              #     result = run_query(query) # Execute the query
+              #     print("Result: " + str(result))
