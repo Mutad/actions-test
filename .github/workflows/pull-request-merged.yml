@@ -8,109 +8,53 @@ on:
         description: "Pull Request ID"
         required: true
 jobs:
-  close-issue:
+  move-issue-card:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
-      - name: Get linked issues of a PR
-        id: get-linked-issues
+      - name: Gather Cards
+        id: gather-cards
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_ID: ${{ github.event.pull_request.node_id }}
+          INPUT_PR_ID: ${{ github.event.inputs.pr_id }}
         run: |
-          echo "PR ID: $PR_ID"
-          linked_issue_ids="$( gh api graphql -f query='
-          query ($id: ID!) {
-            node(id: $id) {
+          # if INPUT_PR_ID is set, use that instead of PR_ID
+          if [ -n "$INPUT_PR_ID" ]; then
+            PR_ID=$INPUT_PR_ID
+          fi
+
+          issues="$( gh api graphql -f query='
+          query {
+            node (id: $PR_ID) {
               ... on PullRequest {
-                timelineItems(first: 100, itemTypes: [CONNECTED_EVENT]) {
-                  nodes {
-                    ... on ConnectedEvent {
-                      subject {
-                         ... on Issue { number }
+                closingIssuesReferences(first: 10) {
+                  edges {
+                    node {
+                      ... on Issue {
+                        projectCards(first: 100) {
+                          nodes {
+                            ... on ProjectCard {
+                              project {
+                                id
+                                name
+                                columns (first: 100) {
+                                  nodes {
+                                    id
+                                    databaseId
+                                    name
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
                       }
                     }
                   }
                 }
               }
             }
-          }' -f id=$PR_ID --jq '.data.node.timelineItems.nodes[].subject.number')"
+          }' -f id=$PR_ID --jq '.data.node.closingIssuesReferences.edges[]')"
+          echo "Issues: $issues"
 
-          echo "Linked Issue IDs: $linked_issue_ids"
-
-          for ISSUE_ID in $linked_issue_ids; do
-            echo "Issue ID: $ISSUE_ID"
-
-            # Check that ISSUE_ID is set and is an integer
-            if ! [[ "$ISSUE_ID" =~ ^[0-9]+$ ]]; then
-              echo "Invalid issue ID: $ISSUE_ID"
-              continue
-            fi
-
-            # get the project card ID associated with the issue
-            project_card_id="$( gh api graphql -f query='
-            query ($number: Int!) {
-              repository(owner: "${{github.repository_owner}}", name: "${{github.event.repository.name}}") {
-                issue(number: $number) {
-                  projectCards(first: 100) {
-                    nodes {
-                      id
-                    }
-                  }
-                }
-              }
-            }' -F number=$ISSUE_ID --jq '.data.repository.issue.projectCards.nodes[].id')"
-
-            echo "Project Card ID: $project_card_id"
-
-            if [ -z "$project_card_id" ]; then
-              echo "No project card found for issue $ISSUE_ID"
-              continue
-            fi
-
-            # get project associated with the project card
-            project_id="$( gh api graphql -f query='
-            query ($id: ID!) {
-              node(id: $id) {
-                ... on ProjectCard {
-                  project {
-                    id
-                  }
-                }
-              }
-            }' -F id=$project_card_id --jq '.data.node.project.id')"
-
-
-            column_id=19726775
-            # get column node id from column id
-            column_id="$( gh api graphql -f query='
-            query ($id: ID!) {
-              node(id: $id) {
-                ... on ProjectColumn {
-                  databaseId
-                }
-              }
-            }' -F id=$column_id --jq '.data.node.databaseId')"
-            echo "Column ID: $column_id"
-
-            # move the project card to the "Done" column
-            gh api graphql -f query='
-            mutation {
-              moveProjectCard(
-                input: {
-                  cardId: "'$project_card_id'"
-                  columnId: "'$column_id'"
-                }
-              ) {
-                cardEdge {
-                  node {
-                    content {
-                      ... on Issue {
-                        title
-                      }
-                    }
-                  }
-                }
-              }
-            }'
-          done
