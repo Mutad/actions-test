@@ -32,6 +32,7 @@ jobs:
                   edges {
                     node {
                       ... on Issue {
+                        id
                         projectCards(first: 100) {
                           nodes {
                             ... on ProjectCard {
@@ -61,9 +62,37 @@ jobs:
         id: move-cards
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          issues = ${{ steps.gather-cards.outputs.issues }}
-          print(issues)
         shell: python
-
-
+        run: |
+          def run_query(query): # A simple function to use requests.post to make the API call. Note the json= section.
+            request = requests.post('https://api.github.com/graphql', json={'query': query}, headers=headers)
+            if request.status_code == 200:
+                return request.json()
+            else:
+                raise Exception("Query failed to run by returning code of {}. {}".format(request.status_code, query))
+          issues = ${{ steps.gather-cards.outputs.issues }}
+          foreach issue in issues:
+            issue_id = issue.node.id
+            print("Found linked issue: " + issue_id)
+            foreach projectCard in issue.node.projectCards.nodes:
+              project_id = projectCard.project.id
+              project_name = projectCard.project.name
+              print("Issue linked to project: " + project_name)
+              # find the column named "Done"
+              foreach column in projectCard.project.columns.nodes:
+                if column.name == "Done":
+                  column_id = column.id
+                  column_db_id = column.databaseId
+                  print("Moving card to column: " + column.name + " " + column_id + " (" + column_db_id + ")")
+                  # move the card to the "Done" column
+                  query = """
+                  {
+                    mutation {
+                      moveProjectCard(input: {cardId: "%s", columnId: "%s"}) {
+                        clientMutationId
+                      }
+                  }
+                  """ % (projectCard.id, column_id)
+                  print("Query: " + query)
+                  result = run_query(query) # Execute the query
+                 
