@@ -30,7 +30,7 @@ jobs:
 
           issues="$( gh api graphql -f query='
           {
-            node(id: "PR_kwDOLA1oXM5jWBUr") {
+            node(id: "'"$PR_ID"'") {
               ... on PullRequest {
                 closingIssuesReferences(first: 10) {
                   edges {
