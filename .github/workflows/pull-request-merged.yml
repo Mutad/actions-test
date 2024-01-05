@@ -8,11 +8,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Get linked issues of a PR
+        id: get-linked-issues
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_ID: ${{ github.event.pull_request.node_id }}
         run: |
-          linked_issue_id="$( gh api graphql -f query='
+          # Note: i'm not sure if this is the best way to get the linked issue id
+          # but it works for now
+          # Returns array of linked issues ids "1 2 3"
+          linked_issue_ids="$( gh api graphql -f query='
           query ($id: ID!) {
             node(id: $id) {
               ... on PullRequest {
@@ -28,5 +32,38 @@ jobs:
               }
             }
           }' -f id=$PR_ID --jq '.data.node.timelineItems.nodes[].subject.number')"
-          echo "Linked issue id: $linked_issue_id"
-          echo "PR id: $PR_ID"
+          echo "linked_issue_ids=$linked_issue_ids" >> $GITHUB_OUTPUT
+      - name: Move linked issues to Done column
+        env:
+          ISSUE_IDS: ${{ steps.get-linked-issues.outputs.linked_issue_ids }}
+        run: |
+          for ISSUE_ID in $ISSUE_IDS; do
+            # get the project card ID associated with the issue
+            project_card_id="$( gh api graphql -f query='
+            query ($number: Int!) {
+              repository(owner: "${{github.repository_owner}}", name: "${{github.event.repository.name}}") {
+                issue(number: $number) {
+                  projectCards(first: 100) {
+                    nodes {
+                      id
+                    }
+                  }
+                }
+              }
+            }' -f number=$ISSUE_ID --jq '.data.repository.issue.projectCards.nodes[].id')"
+
+            echo "project_card_id=$project_card_id" >> $GITHUB_OUTPUT
+
+            if [ -z "$project_card_id" ]; then
+              echo "No project card found for issue $ISSUE_ID"
+              continue
+            fi
+
+            # move the project card to the "Done" column
+            gh api graphql -f query='
+            mutation ($id: ID!) {
+              moveProjectCard(input: {cardId: $id, columnId: "19726775"}) {
+                clientMutationId
+              }
+            }' -f id=$project_card_id
+          done
