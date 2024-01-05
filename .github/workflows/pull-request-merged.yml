@@ -114,6 +114,9 @@ jobs:
                 )
               }
               """ % (project_id, item_id, item_field_id, field_value_id)
+              print("Query: " + query)
+              result = run_query(query) # Execute the query
+              print("Result: " + str(result))
               # for column in projectCard["project"]["columns"]["nodes"]:
               #   if column["name"] == "Done":
               #     column_id = column["id"]
