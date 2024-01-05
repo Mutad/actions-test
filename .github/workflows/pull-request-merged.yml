@@ -29,9 +29,10 @@ jobs:
           fi
 
           issues="$( gh api graphql -f query='
-          {
+          query {
             node(id: "'"$PR_ID"'") {
               ... on PullRequest {
+                number
                 closingIssuesReferences(first: 10) {
                   edges {
                     node {
@@ -43,6 +44,7 @@ jobs:
                             node {
                               project {
                                 id
+                                title
                                 field(name: "Status") {
                                   ... on ProjectV2SingleSelectField {
                                     options(names: "Staging") {
