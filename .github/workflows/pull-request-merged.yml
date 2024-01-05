@@ -73,26 +73,26 @@ jobs:
                 raise Exception("Query failed to run by returning code of {}. {}".format(request.status_code, query))
           issues = ${{ steps.gather-cards.outputs.issues }}
           for issue in issues:
-          issue_id = issue["node"]["id"]
-          print("Found linked issue: " + issue_id)
-          for projectCard in issue["node"]["projectCards"]["nodes"]:
-            project_id = projectCard["project"]["id"]
-            project_name = projectCard["project"]["name"]
-            print("Issue linked to project: " + project_name)
-            # find the column named "Done"
-            for column in projectCard["project"]["columns"]["nodes"]:
-              if column["name"] == "Done":
-                column_id = column["id"]
-                column_db_id = column["databaseId"]
-                print("Moving card to column: " + column["name"] + " " + column_id)
-                # move the card to the "Done" column
-                query = """
-                {
-                  mutation {
-                    moveProjectCard(input: {cardId: "%s", columnId: "%s"}) {
-                    clientMutationId
+            issue_id = issue["node"]["id"]
+            print("Found linked issue: " + issue_id)
+            for projectCard in issue["node"]["projectCards"]["nodes"]:
+              project_id = projectCard["project"]["id"]
+              project_name = projectCard["project"]["name"]
+              print("Issue linked to project: " + project_name)
+              # find the column named "Done"
+              for column in projectCard["project"]["columns"]["nodes"]:
+                if column["name"] == "Done":
+                  column_id = column["id"]
+                  column_db_id = column["databaseId"]
+                  print("Moving card to column: " + column["name"] + " " + column_id)
+                  # move the card to the "Done" column
+                  query = """
+                  {
+                    mutation {
+                      moveProjectCard(input: {cardId: "%s", columnId: "%s"}) {
+                      clientMutationId
+                    }
                   }
-                }
-                """ % (projectCard["id"], column_id)
-                print("Query: " + query)
-                # result = run_query(query) # Execute the query
+                  """ % (projectCard["id"], column_id)
+                  print("Query: " + query)
+                  result = run_query(query) # Execute the query
