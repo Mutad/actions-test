@@ -43,8 +43,11 @@ jobs:
           for ISSUE_ID in $linked_issue_ids; do
             echo "Issue ID: $ISSUE_ID"
 
-            # cast to int
-            id_int=$((ISSUE_ID + 0))
+            # Check that ISSUE_ID is set and is an integer
+            if ! [[ "$ISSUE_ID" =~ ^[0-9]+$ ]]; then
+              echo "Invalid issue ID: $ISSUE_ID"
+              continue
+            fi
 
             # get the project card ID associated with the issue
             project_card_id="$( gh api graphql -f query='
