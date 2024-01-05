@@ -3,17 +3,32 @@ on:
   pull_request:
     types: [closed]
 jobs:
-  if-merged:
+  close-issue:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
-      - name: 'Checkout'
-        uses: actions/checkout@v2
-      - name: 'Get Linked Issues'
-        id: linked-issues
-        uses: kin/gh-action-get-linked-issues@v1.0
-        with:
-          access-token: ${{ secrets.GITHUB_TOKEN }}
-      - name: 'Log Linked Issues'
+      - name: Get linked issues of a PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_ID: ${{ github.event.pull_request.node_id }}
         run: |
-          echo "Linked Issues: ${{ steps.linked-issues.outputs.issues }}"
+          linked_issue_id="$( gh api graphql -f query='
+          query($pr:ID!) {
+            node(id: $pr) {
+              ... on PullRequest {
+                closingIssuesReferences(first:1, userLinkedOnly:false) {
+                  totalCount
+                  nodes { 
+                    id 
+                    projectItems(first: 5) {
+                      nodes {
+                        id
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }' -f pr=$PR_ID --jq '.data.node.closingIssuesReferences.nodes[0].projectItems.nodes[0].id')"
+          echo "Linked issue id: $linked_issue_id"
+          echo "PR id: $PR_ID"
