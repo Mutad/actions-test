@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       username_to_channel_id: ${{ vars.USERNAME_TO_CHANNEL_ID }}
-      issues_channel_id: ${{ secrets.ISSUES_CHANNEL_ID }}
+      issues_channel_id: ${{ vars.ISSUES_CHANNEL_ID }}
     steps:
       - name: Gather Assigned Users
         id: assignees
