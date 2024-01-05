@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       pr_id:
-        description: 'Pull Request ID'
+        description: "Pull Request ID"
         required: true
 jobs:
   close-issue:
@@ -70,23 +70,26 @@ jobs:
               continue
             fi
 
-            # get the project column ID for the "Done" column
-            project_column_id="$( gh api graphql -f query='
-            query ($id: ID!) {
-              node(id: $id) {
-                ... on ProjectCard {
-                  column {
-                    id
-                  }
-                }
-              }
-            }' -F id=$project_card_id --jq '.data.node.column.id')"
+            column_id=19726775
 
             # move the project card to the "Done" column
             gh api graphql -f query='
-            mutation ($id: ID!) {
-              moveProjectCard(input: {cardId: $id, columnId: "'$project_column_id'"}) {
-                clientMutationId
+            mutation {
+              moveProjectCard(
+                input: {
+                  cardId: "'$project_card_id'"
+                  columnId: "'$column_id'"
+                }
+              ) {
+                cardEdge {
+                  node {
+                    content {
+                      ... on Issue {
+                        title
+                      }
+                    }
+                  }
+                }
               }
-            }' -f id=$project_card_id
+            }'
           done
