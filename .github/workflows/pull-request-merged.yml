@@ -94,10 +94,12 @@ jobs:
                   query = """
                   {
                     mutation {
-                      moveProjectCard(input: {cardId: "%s", columnId: "%s"}) {
-                      clientMutationId
+                        moveProjectCard(input: {cardId: "%s" columnId: "%s"}) {
+                        clientMutationId
+                      }
                     }
                   }
                   """ % (projectCard["id"], column_id)
                   print("Query: " + query)
                   result = run_query(query) # Execute the query
+                  print("Result: " + str(result))
