@@ -71,6 +71,16 @@ jobs:
             fi
 
             column_id=19726775
+            # convert the numberic column id to node id
+            column_id="$( gh api graphql -f query='
+            query ($id: ID!) {
+              node(id: $id) {
+                ... on ProjectColumn {
+                  id
+                }
+              }
+            }' -F id=$column_id --jq '.data.node.id')"
+            echo "Column ID: $column_id"
 
             # move the project card to the "Done" column
             gh api graphql -f query='
