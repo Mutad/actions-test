@@ -2,14 +2,10 @@ name: Pull Request Merged
 on:
   pull_request:
     types: [closed]
-  workflow_dispatch:
-    inputs:
-      pr_id:
-        description: "Pull Request ID"
-        required: true
 jobs:
   move-issue-card:
-    #if: github.event.pull_request.merged == true
+    # only run if PR is merged and target branch is staging
+    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'staging'
     permissions:
       issues: write
       repository-projects: write
@@ -19,7 +15,7 @@ jobs:
         id: gather-cards
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_ID: ${{ github.event.pull_request.node_id }}
+          PR_ID: b${{ github.event.pull_request.node_id }}
           INPUT_PR_ID: ${{ github.event.inputs.pr_id }}
         run: |
           # if INPUT_PR_ID is set, use that instead of PR_ID
