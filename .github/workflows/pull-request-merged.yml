@@ -15,7 +15,7 @@ jobs:
         id: gather-cards
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_ID: b${{ github.event.pull_request.node_id }}
+          PR_ID: ${{ github.event.pull_request.node_id }}
           INPUT_PR_ID: ${{ github.event.inputs.pr_id }}
         run: |
           # if INPUT_PR_ID is set, use that instead of PR_ID
