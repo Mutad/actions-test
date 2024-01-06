@@ -42,7 +42,7 @@ jobs:
             # PR_ID is given, get the PR id from the PR number
             PR_ID="$( gh api graphql -f query='
             query {
-              repository(owner: "'"$GITHUB_REPOSITORY_OWNER"'", name: "'"${github.event.repository.name}"'") {
+              repository(owner: "'"$GITHUB_REPOSITORY_OWNER"'", name: "'"${{github.event.repository.name}}"'") {
                 pullRequest(number: '"$INPUT_PR_ID"') {
                   id
                 }
