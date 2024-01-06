@@ -41,7 +41,7 @@ jobs:
           project="$( gh api graphql -f query='
           query {
             user (login: "mutad") {
-              projectV2(number:5) {
+              projectV2(number:2) {
                 title
               }
             }
