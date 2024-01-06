@@ -57,6 +57,8 @@ jobs:
             STATUS_COLUMN="Staging"
           fi
 
+          echo "Status column: $STATUS_COLUMN"
+
           issues="$( gh api graphql -f query='
           query {
             node(id: "'"$PR_ID"'") {
@@ -85,7 +87,7 @@ jobs:
                                 field(name: "Status") {
                                   ... on ProjectV2SingleSelectField {
                                     id
-                                    options(names: "'"STATUS_COLUMN"'") {
+                                    options(names: "'"$STATUS_COLUMN"'") {
                                       id
                                       name
                                     }
