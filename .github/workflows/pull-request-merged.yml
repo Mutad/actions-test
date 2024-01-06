@@ -117,7 +117,10 @@ jobs:
                 raise Exception("Query failed to run by returning code of {}. {}".format(request.status_code, query))
           
           issues = os.environ['ISSUES']
+          print(issues)
           for issue in issues:
+            print("enter loop")
+            print(issue)
             issue_id = issue["node"]["id"]
             print("Found linked issue: " + issue_id)
             for projectItem in issue["node"]["projectItems"]["edges"]:
