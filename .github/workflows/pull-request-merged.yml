@@ -275,5 +275,6 @@ jobs:
             {
               "unfurl_links": false,
               "unfurl_media": false,
+              "text": "New PR ready for QA!",
               "blocks": ${{ steps.move-cards.outputs.slack_messages }}
             }

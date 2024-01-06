@@ -42,6 +42,7 @@ jobs:
             {
               "unfurl_links": false,
               "unfurl_media": false,
+              "text": "A new issue has been created!",
               "blocks": [
                 {
                   "type": "section",
