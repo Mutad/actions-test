@@ -106,6 +106,7 @@ jobs:
         run: |
           import requests
           import os
+          import json
 
           token = os.environ['GH_TOKEN']
           headers = {"Authorization": "Bearer " + token}
@@ -116,7 +117,8 @@ jobs:
             else:
                 raise Exception("Query failed to run by returning code of {}. {}".format(request.status_code, query))
           
-          issues = os.environ['ISSUES']
+          # get issues from env and parse json
+          issues = json.loads(os.environ['ISSUES'])
           print(issues)
           for issue in issues:
             print("enter loop")
