@@ -48,16 +48,6 @@ jobs:
           }')"
           echo "Project: $project"
 
-          test="$( gh api graphql -f query='
-          query {
-            node(id: "PVT_kwHOAsyhUs4AahfN") {
-              ... on ProjectV2{
-                title
-              }
-            }
-          }')"
-          echo "Test result: $test"
-
           issues="$( gh api graphql -f query='
           query {
             node(id: "'"$PR_ID"'") {
