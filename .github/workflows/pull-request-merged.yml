@@ -173,7 +173,7 @@ jobs:
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": "*"+issue["node"]["title"]+"*\n" + assignees.join(", ")
+                  "text": "*"+issue["node"]["title"]+"*\n" + ", ".join(assignees)
                 },
                 "accessory": {
                   "type": "button",
