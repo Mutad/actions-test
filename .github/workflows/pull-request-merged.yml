@@ -23,7 +23,7 @@ jobs:
         id: generate-token
         uses: actions/create-github-app-token@v1
         with:
-          app-id: 784960
+          app-id: 787639
           private-key: ${{ secrets.APP_KEY }}
 
       - name: Gather Cards
