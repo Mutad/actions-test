@@ -127,7 +127,7 @@ jobs:
             print("Found linked issue: " + issue_id)
             for projectItem in issue["node"]["projectItems"]["edges"]:
               project_id = projectItem["node"]["project"]["id"]
-              project_name = projectCard["node"]["project"]["title"]
+              project_name = projectItem["node"]["project"]["title"]
               field_value_id = projectItem["node"]["project"]["field"]["options"][0]["id"]
               print("Issue linked to project: " + project_name)
               item_id = projectItem["node"]["id"]
