@@ -38,6 +38,16 @@ jobs:
             PR_ID=$INPUT_PR_ID
           fi
 
+          project="$( gh api graphql -f query='
+          query {
+            user (login: "mutad") {
+              projectV2(number:5) {
+                title
+              }
+            }
+          }')"
+          echo "Project: $project"
+
           test="$( gh api graphql -f query='
           query {
             node(id: "PVT_kwHOAsyhUs4AahfN") {
