@@ -222,7 +222,7 @@ jobs:
         id: get-qa-channel-id
         if: github.event.pull_request.base.ref == 'main'
         env:
-          username_to_channel_id: ${{ secrets.USERNAME_TO_CHANNEL_ID }}
+          username_to_channel_id: ${{ vars.USERNAME_TO_CHANNEL_ID }}
         run: |
           # get QA channel number
           for i in $username_to_channel_id; do
@@ -234,6 +234,7 @@ jobs:
             fi
           done
           # output QA channel id
+          echo "QA channel id: $QA_CHANNEL_ID"
           echo "QA_CHANNEL_ID=$QA_CHANNEL_ID" >> $GITHUB_OUTPUT
       - name: Slack Notification
         env:
