@@ -67,6 +67,7 @@ jobs:
                                 title
                                 field(name: "Status") {
                                   ... on ProjectV2SingleSelectField {
+                                    id
                                     options(names: "Staging") {
                                       id
                                       name
@@ -131,7 +132,7 @@ jobs:
               field_value_id = projectItem["node"]["project"]["field"]["options"][0]["id"]
               print("Issue linked to project: " + project_name)
               item_id = projectItem["node"]["id"]
-              item_field_id = projectItem["node"]["status"]["id"]
+              item_field_id = projectItem["node"]["project"]["field"]["id"]
 
               # update the project item field value
               query = """
