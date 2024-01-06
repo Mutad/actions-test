@@ -10,7 +10,7 @@ on:
 jobs:
   move-issue-card:
     # only run if PR is merged and target branch is staging (or if manually triggered)
-    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'staging' || github.event_name == 'workflow_dispatch'
+    if: github.event.pull_request.merged == true && (github.event.pull_request.base.ref == 'main' || github.event.pull_request.base.ref == 'staging' || github.event_name == 'workflow_dispatch')
 
     permissions:
       issues: write
@@ -50,6 +50,13 @@ jobs:
             }' --jq '.data.repository.pullRequest.id')"
           fi
 
+          # if branch is main, set status field to production otherwise set to staging
+          if [ "${{ github.event.pull_request.base.ref }}" == "main" ]; then
+            STATUS_COLUMN="Production"
+          else
+            STATUS_COLUMN="Staging"
+          fi
+
           issues="$( gh api graphql -f query='
           query {
             node(id: "'"$PR_ID"'") {
@@ -70,7 +77,7 @@ jobs:
                                 field(name: "Status") {
                                   ... on ProjectV2SingleSelectField {
                                     id
-                                    options(names: "Staging") {
+                                    options(names: "'"STATUS_COLUMN"'") {
                                       id
                                       name
                                     }
@@ -122,12 +129,55 @@ jobs:
           
           # get issues from env and parse json
           issues = json.loads(os.environ['ISSUES'])
+          slack_messages = [
+            {
+              "type": "context",
+              "elements": [
+                {
+                  "type": "image",
+                  "image_url": "https://api.slack.com/img/blocks/bkb_template_images/notificationsWarningIcon.png",
+                  "alt_text": "notifications warning icon"
+                },
+                {
+                  "type": "mrkdwn",
+                  "text": "*Resolved issues: " + str(len(issues)) + "*"
+                }
+              ]
+            },
+            {
+              "type": "divider"
+            }
+          ]
           print(issues)
           for issue in issues:
             print("enter loop")
             print(issue)
             issue_id = issue["node"]["id"]
             print("Found linked issue: " + issue_id)
+
+            assignees = []
+            for assignee in issue["node"]["assignees"]["nodes"]:
+              assignees.append("<" + assignee["url"] + "|" + assignee["login"] + ">")
+
+            # add issue to slack message
+            slack_messages.append(
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*"+issue["node"]["title"]+"*\n" + assignees.join(", ")
+                },
+                "accessory": {
+                  "type": "button",
+                  "text": {
+                    "text": "Open",
+                    "type": "plain_text"
+                  },
+                  "url": issue["node"]["url"]
+                }
+              }
+            )
+
             for projectItem in issue["node"]["projectItems"]["edges"]:
               project_id = projectItem["node"]["project"]["id"]
               project_name = projectItem["node"]["project"]["title"]
@@ -135,7 +185,6 @@ jobs:
               print("Issue linked to project: " + project_name)
               item_id = projectItem["node"]["id"]
               item_field_id = projectItem["node"]["project"]["field"]["id"]
-
               # update the project item field value
               query = """
               mutation {
@@ -156,3 +205,64 @@ jobs:
               print("Query: " + query)
               result = run_query(query) # Execute the query
               print("Result: " + str(result))
+          
+          # set slack messages to output
+          print("::set-output name=slack_messages::" + json.dumps(slack_messages))
+      - name: Get QA Channel ID
+        id: get-qa-channel-id
+        if: github.event.pull_request.base.ref == 'main'
+        env:
+          username_to_channel_id: ${{ secrets.USERNAME_TO_CHANNEL_ID }}
+        run: |
+          # get QA channel number
+          for i in $username_to_channel_id; do
+            # USERNAME=CHANNEL_ID
+            USERNAME=$(echo $i | cut -d'=' -f1)
+            CHANNEL_ID=$(echo $i | cut -d'=' -f2)
+            if [ "$USERNAME" == "QA" ]; then
+              QA_CHANNEL_ID=$CHANNEL_ID
+            fi
+          done
+          # output QA channel id
+          echo "QA_CHANNEL_ID=$QA_CHANNEL_ID" >> $GITHUB_OUTPUT
+      - name: Slack Notification
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          slack_messages: ${{ steps.move-cards.outputs.slack_messages }}
+        # run only if QA channel id is set
+        if: steps.get-qa-channel-id.outputs.QA_CHANNEL_ID != ''
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          channel-id: ${{ steps.get-qa-channel-id.outputs.QA_CHANNEL_ID }}
+          payload: |
+            {
+              "unfurl_links": false,
+              "unfurl_media": false,
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "New PR ready for QA!"
+                  }
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "*PR:*\n<${{ github.event.pull_request.html_url }}|${{ github.event.pull_request.title }}>"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Repository:*\n<${{ github.event.repository.html_url }}|${{ github.event.repository.full_name }}>"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Opened By:*\n<${{ github.event.pull_request.user.html_url }}|${{ github.event.pull_request.user.login }}>"
+                    }
+                  ]
+                },
+                ${{ steps.move-cards.outputs.slack_messages }}
+              ]
+            }
