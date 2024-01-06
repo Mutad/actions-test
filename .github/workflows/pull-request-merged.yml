@@ -10,7 +10,7 @@ on:
 jobs:
   move-issue-card:
     # only run if PR is merged and target branch is staging (or if manually triggered)
-    if: github.event.pull_request.merged == true && (github.event.pull_request.base.ref == 'main' || github.event.pull_request.base.ref == 'staging' || github.event_name == 'workflow_dispatch')
+    if: github.event.pull_request.merged == true && (github.event.pull_request.base.ref == 'main' || github.event.pull_request.base.ref == 'staging')
 
     permissions:
       issues: write
@@ -68,6 +68,14 @@ jobs:
                       ... on Issue {
                         id
                         number
+                        title
+                        url
+                        assignees(first:100) {
+                          nodes {
+                            login
+                            url
+                          }
+                        }
                         projectItems(last: 100) {
                           edges {
                             node {
