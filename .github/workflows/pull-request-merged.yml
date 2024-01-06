@@ -141,6 +141,30 @@ jobs:
           issues = json.loads(os.environ['ISSUES'])
           slack_messages = [
             {
+              "type": "section",
+              "text": {
+                "type": "mrkdwn",
+                "text": "New PR ready for QA!"
+              }
+            },
+            {
+              "type": "section",
+              "fields": [
+                {
+                  "type": "mrkdwn",
+                  "text": "*PR:*\n<${{ github.event.pull_request.html_url }}|${{ github.event.pull_request.title }}>"
+                },
+                {
+                  "type": "mrkdwn",
+                  "text": "*Repository:*\n<${{ github.event.repository.html_url }}|${{ github.event.repository.full_name }}>"
+                },
+                {
+                  "type": "mrkdwn",
+                  "text": "*Opened By:*\n<${{ github.event.pull_request.user.html_url }}|${{ github.event.pull_request.user.login }}>"
+                }
+              ]
+            },
+            {
               "type": "context",
               "elements": [
                 {
@@ -217,7 +241,9 @@ jobs:
               print("Result: " + str(result))
           
           # set slack messages to output
-          print("::set-output name=slack_messages::" + json.dumps(slack_messages))
+          print(json.dumps(slack_messages))
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+            print("slack_messages=" + json.dumps(slack_messages), file=f)
       - name: Get QA Channel ID
         id: get-qa-channel-id
         if: github.event.pull_request.base.ref == 'main'
@@ -249,31 +275,5 @@ jobs:
             {
               "unfurl_links": false,
               "unfurl_media": false,
-              "blocks": [
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "New PR ready for QA!"
-                  }
-                },
-                {
-                  "type": "section",
-                  "fields": [
-                    {
-                      "type": "mrkdwn",
-                      "text": "*PR:*\n<${{ github.event.pull_request.html_url }}|${{ github.event.pull_request.title }}>"
-                    },
-                    {
-                      "type": "mrkdwn",
-                      "text": "*Repository:*\n<${{ github.event.repository.html_url }}|${{ github.event.repository.full_name }}>"
-                    },
-                    {
-                      "type": "mrkdwn",
-                      "text": "*Opened By:*\n<${{ github.event.pull_request.user.html_url }}|${{ github.event.pull_request.user.login }}>"
-                    }
-                  ]
-                },
-                ${{ steps.move-cards.outputs.slack_messages }}
-              ]
+              "blocks": ${{ steps.move-cards.outputs.slack_messages }}
             }
