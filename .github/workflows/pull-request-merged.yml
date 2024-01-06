@@ -5,27 +5,31 @@ on:
   workflow_dispatch:
     inputs:
       pr_id:
-        description: "Pull Request ID"
+        description: "Pull Request Number"
         required: true
 jobs:
   move-issue-card:
-    # only run if PR is merged and target branch is staging
-    # if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'staging'
+    # only run if PR is merged and target branch is staging (or if manually triggered)
+    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'staging' || github.event_name == 'workflow_dispatch'
 
-    # give the workflow access to the projectv2 API
     permissions:
       issues: write
-      repository-projects: write
       
     runs-on: ubuntu-latest
+    # give the workflow access to the projectv2 API
     steps:
       - name: Generate token
         id: generate-token
         uses: actions/create-github-app-token@v1
         with:
+          # To access the projectv2 API, we need to create a GitHub App
+          # because the projectv2 API needs organization permissions
+          # and personal access tokens don't have access to organization permissions
           app-id: 787639
+          # App private key stored in repo secrets
           private-key: ${{ secrets.APP_KEY }}
 
+      # Get array of issues linked to PR with project items
       - name: Gather Cards
         id: gather-cards
         env:
@@ -35,18 +39,16 @@ jobs:
         run: |
           # if INPUT_PR_ID is set, use that instead of PR_ID
           if [ -n "$INPUT_PR_ID" ]; then
-            PR_ID=$INPUT_PR_ID
-          fi
-
-          project="$( gh api graphql -f query='
-          query {
-            organization(login: "cool-dudes-developing") {
-              projectV2(number: 2){
-                title
+            # PR_ID is given, get the PR id from the PR number
+            PR_ID="$( gh api graphql -f query='
+            query {
+              repository(owner: "'"$GITHUB_REPOSITORY_OWNER"'", name: "'"$GITHUB_REPOSITORY"'") {
+                pullRequest(number: '"$INPUT_PR_ID"') {
+                  id
+                }
               }
-            }
-          }')"
-          echo "Project: $project"
+            }' --jq '.data.repository.pullRequest.id')"
+          fi
 
           issues="$( gh api graphql -f query='
           query {
@@ -154,19 +156,3 @@ jobs:
               print("Query: " + query)
               result = run_query(query) # Execute the query
               print("Result: " + str(result))
-              # for column in projectCard["project"]["columns"]["nodes"]:
-              #   if column["name"] == "Done":
-              #     column_id = column["id"]
-              #     column_db_id = column["databaseId"]
-              #     print("Moving card to column: " + column["name"] + " " + column_id)
-              #     # move the card to the "Done" column
-              #     query = """
-              #     mutation {
-              #         moveProjectCard(input: {cardId: "%s" columnId: "%s"}) {
-              #         clientMutationId
-              #       }
-              #     }
-              #     """ % (projectCard["id"], column_id)
-              #     print("Query: " + query)
-              #     result = run_query(query) # Execute the query
-              #     print("Result: " + str(result))
