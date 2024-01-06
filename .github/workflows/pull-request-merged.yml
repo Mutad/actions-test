@@ -146,7 +146,9 @@ jobs:
                       singleSelectOptionId: "%s"
                     }
                   }
-                )
+                ) {
+                  clientMutationId
+                }
               }
               """ % (project_id, item_id, item_field_id, field_value_id)
               print("Query: " + query)
