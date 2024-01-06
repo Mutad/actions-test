@@ -101,7 +101,7 @@ jobs:
       - name: Move Cards
         id: move-cards
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
           ISSUES: ${{ steps.gather-cards.outputs.issues }}
         shell: python
         run: |
