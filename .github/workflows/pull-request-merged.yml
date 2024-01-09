@@ -1,11 +1,11 @@
 name: Pull Request Merged
 on:
-  pull_request:
+  issues:
     types: [closed]
   workflow_dispatch:
     inputs:
-      pr_id:
-        description: "Pull Request Number"
+      issue_id:
+        description: "Issue Number"
         required: true
 jobs:
   move-issue-card:
@@ -30,81 +30,55 @@ jobs:
           private-key: ${{ secrets.APP_KEY }}
 
       # Get array of issues linked to PR with project items
-      - name: Gather Cards
+      - name: Get Cards Linked to Issue
         id: gather-cards
         env:
           GH_TOKEN: ${{ steps.generate-token.outputs.token }}
-          PR_ID: ${{ github.event.pull_request.node_id }}
-          INPUT_PR_ID: ${{ github.event.inputs.pr_id }}
+          ISSUE_ID: ${{ github.event.issue.node_id }}
+          INPUT_ISSUE_ID: ${{ github.event.inputs.issue_id }}
         run: |
-          # if INPUT_PR_ID is set, use that instead of PR_ID
-          if [ -n "$INPUT_PR_ID" ]; then
-            # PR_ID is given, get the PR id from the PR number
-            PR_ID="$( gh api graphql -f query='
+          # if INPUT_ISSUE_ID is set, use that instead of ISSUE_ID
+          if [ -n "$INPUT_ISSUE_ID" ]; then
+            # ISSUE_ID is given, get the ISSUE node id from the ISSUE number
+            ISSUE_ID="$( gh api graphql -f query='
             query {
               repository(owner: "'"$GITHUB_REPOSITORY_OWNER"'", name: "'"${{github.event.repository.name}}"'") {
-                pullRequest(number: '"$INPUT_PR_ID"') {
+                issue(number: '"$INPUT_ISSUE_ID"') {
                   id
                 }
               }
             }' --jq '.data.repository.pullRequest.id')"
           fi
 
-          # if branch is main, set status field to production otherwise set to staging
-          if [ "${{ github.event.pull_request.base.ref }}" == "main" ]; then
-            STATUS_COLUMN="Production"
-          else
-            STATUS_COLUMN="Staging"
-          fi
-
           echo "Status column: $STATUS_COLUMN"
 
-          issues="$( gh api graphql -f query='
+          issue="$( gh api graphql -f query='
           query {
-            node(id: "'"$PR_ID"'") {
-              ... on PullRequest {
+            node(id: "'"$ISSUE_ID"'") {
+              ... on Issue {
+                id
                 number
-                closingIssuesReferences(first: 10) {
+                title
+                url
+                assignees(first: 100) {
+                  nodes {
+                    login
+                    url
+                  }
+                }
+                linkedBranches(last: 100) {
                   edges {
                     node {
-                      ... on Issue {
-                        id
-                        number
-                        title
-                        url
-                        assignees(first:100) {
-                          nodes {
-                            login
-                            url
-                          }
-                        }
-                        projectItems(last: 100) {
+                      id
+                      ref {
+                        name
+                        associatedPullRequests(last: 10) {
                           edges {
                             node {
-                              project {
-                                id
-                                title
-                                field(name: "Status") {
-                                  ... on ProjectV2SingleSelectField {
-                                    id
-                                    options(names: "'"$STATUS_COLUMN"'") {
-                                      id
-                                      name
-                                    }
-                                  }
-                                }
-                              }
                               id
-                              title: fieldValueByName(name: "Title") {
-                                ... on ProjectV2ItemFieldTextValue {
-                                  text
-                                }
-                              }
-                              status: fieldValueByName(name: "Status") {
-                                ... on ProjectV2ItemFieldSingleSelectValue {
-                                  id
-                                  optionId
-                                }
+                              merged
+                              baseRef {
+                                name
                               }
                             }
                           }
@@ -113,10 +87,45 @@ jobs:
                     }
                   }
                 }
+                projectItems(first: 100) {
+                  edges {
+                    node {
+                      project {
+                        id
+                        title
+                        field(name: "Status") {
+                          ... on ProjectV2SingleSelectField {
+                            id
+                            production: options(names: "Production") {
+                              id
+                              name
+                            }
+                            staging: options(names: "Staging") {
+                              id
+                              name
+                            }
+                          }
+                        }
+                      }
+                      id
+                      title: fieldValueByName(name: "Title") {
+                        ... on ProjectV2ItemFieldTextValue {
+                          text
+                        }
+                      }
+                      status: fieldValueByName(name: "Status") {
+                        ... on ProjectV2ItemFieldSingleSelectValue {
+                          id
+                          optionId
+                        }
+                      }
+                    }
+                  }
+                }
               }
             }
-          }' --jq '.data.node.closingIssuesReferences.edges')"
-          echo "issues=$issues" >> $GITHUB_OUTPUT
+          }'"
+          echo "issue=$issue" >> $GITHUB_OUTPUT
       - name: Move Cards
         id: move-cards
         env:
@@ -138,13 +147,14 @@ jobs:
                 raise Exception("Query failed to run by returning code of {}. {}".format(request.status_code, query))
           
           # get issues from env and parse json
-          issues = json.loads(os.environ['ISSUES'])
+          issue = json.loads(os.environ['ISSUES'])
+          print("issue=" + str(issues))
           slack_messages = [
             {
               "type": "section",
               "text": {
                 "type": "mrkdwn",
-                "text": "New PR ready for QA!"
+                "text": "*New issue ready for QA!*"
               }
             },
             {
@@ -152,7 +162,7 @@ jobs:
               "fields": [
                 {
                   "type": "mrkdwn",
-                  "text": "*PR:*\n<${{ github.event.pull_request.html_url }}|${{ github.event.pull_request.title }}>"
+                  "text": "*Issue:*\n<${{ github.event.issue.html_url }}|${{ github.event.issue.title }}>"
                 },
                 {
                   "type": "mrkdwn",
@@ -160,85 +170,65 @@ jobs:
                 },
                 {
                   "type": "mrkdwn",
-                  "text": "*Opened By:*\n<${{ github.event.pull_request.user.html_url }}|${{ github.event.pull_request.user.login }}>"
-                }
-              ]
-            },
-            {
-              "type": "context",
-              "elements": [
-                {
-                  "type": "image",
-                  "image_url": "https://api.slack.com/img/blocks/bkb_template_images/notificationsWarningIcon.png",
-                  "alt_text": "notifications warning icon"
+                  "text": "*Opened By:*\n<${{ github.event.issue.user.html_url }}|${{ github.event.issue.user.login }}>"
                 },
                 {
                   "type": "mrkdwn",
-                  "text": "*Resolved issues: " + str(len(issues)) + "*"
+                  "text": "*Linked Branch:*\n${{ github.event.pull_request.head.ref }}"
+                },
+                {
+                  "type": "mrkdwn",
+                  "text": "*Assignees:*\n${{ join(github.event.issue.assignees.*.login, ', ') }}"
                 }
               ]
             },
-            {
-              "type": "divider"
-            }
           ]
-          print(issues)
-          for issue in issues:
-            print("enter loop")
-            print(issue)
-            issue_id = issue["node"]["id"]
-            print("Found linked issue: " + issue_id)
 
-            assignees = []
-            for assignee in issue["node"]["assignees"]["nodes"]:
-              assignees.append("<" + assignee["url"] + "|" + assignee["login"] + ">")
+          isMerged = issue["node"]["linkedBranches"]["edges"][0]["node"]["ref"]["associatedPullRequests"]["edges"][0]["node"]["merged"]
+          print("isMerged=" + str(isMerged))
 
-            # add issue to slack message
-            slack_messages.append(
-              {
-                "type": "section",
-                "text": {
-                  "type": "mrkdwn",
-                  "text": "*"+issue["node"]["title"]+"*\n" + ", ".join(assignees)
-                },
-                "accessory": {
-                  "type": "button",
-                  "text": {
-                    "text": "Open",
-                    "type": "plain_text"
-                  },
-                  "url": issue["node"]["url"]
-                }
-              }
-            )
+          # if PR is not merged, don't move cards
+          if not isMerged:
+            print("PR is not merged, not moving cards")
+            exit(0)
 
-            for projectItem in issue["node"]["projectItems"]["edges"]:
-              project_id = projectItem["node"]["project"]["id"]
-              project_name = projectItem["node"]["project"]["title"]
-              field_value_id = projectItem["node"]["project"]["field"]["options"][0]["id"]
-              print("Issue linked to project: " + project_name)
-              item_id = projectItem["node"]["id"]
-              item_field_id = projectItem["node"]["project"]["field"]["id"]
-              # update the project item field value
-              query = """
-              mutation {
-                updateProjectV2ItemFieldValue(
-                  input: {
-                    projectId: "%s"
-                    itemId: "%s"
-                    fieldId: "%s"
-                    value: {
-                      singleSelectOptionId: "%s"
-                    }
+          # get merge target branch
+          targetBranch = issue["node"]["linkedBranches"]["edges"][0]["node"]["ref"]["associatedPullRequests"]["edges"][0]["node"]["baseRef"]["name"]
+
+          if (targetBranch != "staging" and targetBranch != "main"):
+            print("PR is not merged into staging or main, not moving cards")
+            exit(0)
+
+          for projectItem in issue["node"]["projectItems"]["edges"]:
+            project_id = projectItem["node"]["project"]["id"]
+            project_name = projectItem["node"]["project"]["title"]
+
+            # get field value id for the target branch
+            field_value_id = projectItem["node"]["project"]["field"]["staging"][0]["id"] if targetBranch == "staging" else projectItem["node"]["project"]["field"]["production"][0]["id"]
+            
+            print("Issue linked to project: " + project_name)
+            item_id = projectItem["node"]["id"]
+            item_field_id = projectItem["node"]["project"]["field"]["id"]
+            # update the project item field value
+            query = """
+            mutation {
+              updateProjectV2ItemFieldValue(
+                input: {
+                  projectId: "%s"
+                  itemId: "%s"
+                  fieldId: "%s"
+                  value: {
+                    singleSelectOptionId: "%s"
                   }
-                ) {
-                  clientMutationId
                 }
+              ) {
+                clientMutationId
               }
-              """ % (project_id, item_id, item_field_id, field_value_id)
-              print("Query: " + query)
-              result = run_query(query) # Execute the query
-              print("Result: " + str(result))
+            }
+            """ % (project_id, item_id, item_field_id, field_value_id)
+            print("Query: " + query)
+            result = run_query(query) # Execute the query
+            print("Result: " + str(result))
           
           # set slack messages to output
           print(json.dumps(slack_messages))
