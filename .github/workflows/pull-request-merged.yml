@@ -130,7 +130,7 @@ jobs:
         id: move-cards
         env:
           GH_TOKEN: ${{ steps.generate-token.outputs.token }}
-          ISSUES: ${{ steps.gather-cards.outputs.issues }}
+          ISSUE: ${{ steps.gather-cards.outputs.issue }}
         shell: python
         run: |
           import requests
@@ -147,7 +147,7 @@ jobs:
                 raise Exception("Query failed to run by returning code of {}. {}".format(request.status_code, query))
           
           # get issues from env and parse json
-          issue = json.loads(os.environ['ISSUES'])
+          issue = json.loads(os.environ['ISSUE'])
           print("issue=" + str(issues))
           slack_messages = [
             {
