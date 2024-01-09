@@ -146,9 +146,9 @@ jobs:
             else:
                 raise Exception("Query failed to run by returning code of {}. {}".format(request.status_code, query))
           
-          # get issues from env and parse json
+          # get issue from env and parse json
           issue = json.loads(os.environ['ISSUE'])
-          print("issue=" + str(issues))
+          print("issue=" + str(issue))
           slack_messages = [
             {
               "type": "section",
