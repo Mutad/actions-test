@@ -47,7 +47,7 @@ jobs:
                   id
                 }
               }
-            }' --jq '.data.repository.pullRequest.id')"
+            }' --jq '.data.repository.issue.id' )"
           fi
 
           echo "Status column: $STATUS_COLUMN"
