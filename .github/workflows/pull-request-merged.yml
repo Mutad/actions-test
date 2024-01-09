@@ -29,7 +29,7 @@ jobs:
           # App private key stored in repo secrets
           private-key: ${{ secrets.APP_KEY }}
 
-      # Get array of issues linked to PR with project items
+      # Get details about the issue that was closed
       - name: Get Cards Linked to Issue
         id: gather-cards
         env:
@@ -124,7 +124,7 @@ jobs:
                 }
               }
             }
-          }'"
+          }')"
           echo "issue=$issue" >> $GITHUB_OUTPUT
       - name: Move Cards
         id: move-cards
