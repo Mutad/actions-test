@@ -66,21 +66,17 @@ jobs:
                     url
                   }
                 }
-                linkedBranches(last: 100) {
+                timelineItems (last: 1 itemTypes: CONNECTED_EVENT) {
                   edges {
                     node {
-                      id
-                      ref {
-                        name
-                        associatedPullRequests(last: 10) {
-                          edges {
-                            node {
-                              id
-                              merged
+                      ... on ConnectedEvent {
+                        subject {
+                          ... on PullRequest {
+                            id
+                            merged
                               baseRef {
                                 name
                               }
-                            }
                           }
                         }
                       }
@@ -184,11 +180,11 @@ jobs:
             },
           ]
 
-          if (len(issue["linkedBranches"]["edges"]) == 0):
-            print("Issue is not linked to a branch, not moving cards")
+          if (len(issue["timelineItems"]["edges"]) == 0):
+            print("Issue has no linked PR, not moving cards")
             exit(0)
 
-          isMerged = issue["linkedBranches"]["edges"][0]["node"]["ref"]["associatedPullRequests"]["edges"][0]["node"]["merged"]
+          isMerged = issue["timelineItems"]["edges"][0]["node"]["subject"]["merged"]
           print("isMerged=" + str(isMerged))
 
           # if PR is not merged, don't move cards
@@ -197,7 +193,7 @@ jobs:
             exit(0)
 
           # get merge target branch
-          targetBranch = issue["linkedBranches"]["edges"][0]["node"]["ref"]["associatedPullRequests"]["edges"][0]["node"]["baseRef"]["name"]
+          targetBranch = issue["timelineItems"]["edges"][0]["node"]["subject"]["baseRef"]["name"]
 
           if (targetBranch != "staging" and targetBranch != "main"):
             print("PR is not merged into staging or main, not moving cards")
