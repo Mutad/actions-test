@@ -186,7 +186,7 @@ jobs:
 
           if (count(issue["linkedBranches"]["edges"]) == 0):
             print("Issue is not linked to a branch, not moving cards")
-            exit(0
+            exit(0)
 
           isMerged = issue["linkedBranches"]["edges"][0]["node"]["ref"]["associatedPullRequests"]["edges"][0]["node"]["merged"]
           print("isMerged=" + str(isMerged))
