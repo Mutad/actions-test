@@ -124,7 +124,7 @@ jobs:
                 }
               }
             }
-          }')"
+          }' --jq '.data.node' )"
           echo "issue=$issue" >> $GITHUB_OUTPUT
       - name: Move Cards
         id: move-cards
@@ -184,7 +184,7 @@ jobs:
             },
           ]
 
-          isMerged = issue["node"]["linkedBranches"]["edges"][0]["node"]["ref"]["associatedPullRequests"]["edges"][0]["node"]["merged"]
+          isMerged = issue["linkedBranches"]["edges"][0]["node"]["ref"]["associatedPullRequests"]["edges"][0]["node"]["merged"]
           print("isMerged=" + str(isMerged))
 
           # if PR is not merged, don't move cards
@@ -193,13 +193,13 @@ jobs:
             exit(0)
 
           # get merge target branch
-          targetBranch = issue["node"]["linkedBranches"]["edges"][0]["node"]["ref"]["associatedPullRequests"]["edges"][0]["node"]["baseRef"]["name"]
+          targetBranch = issue["linkedBranches"]["edges"][0]["node"]["ref"]["associatedPullRequests"]["edges"][0]["node"]["baseRef"]["name"]
 
           if (targetBranch != "staging" and targetBranch != "main"):
             print("PR is not merged into staging or main, not moving cards")
             exit(0)
 
-          for projectItem in issue["node"]["projectItems"]["edges"]:
+          for projectItem in issue["projectItems"]["edges"]:
             project_id = projectItem["node"]["project"]["id"]
             project_name = projectItem["node"]["project"]["title"]
 
