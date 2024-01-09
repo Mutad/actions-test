@@ -233,7 +233,7 @@ jobs:
           # set slack messages to output
           print(json.dumps(slack_messages))
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
-            print("merged=" + str(isMerged), file=f")
+            print("merged=" + str(isMerged), file=f)
             print("slack_messages=" + json.dumps(slack_messages), file=f)
       - name: Get QA Channel ID
         id: get-qa-channel-id
