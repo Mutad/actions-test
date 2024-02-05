@@ -211,7 +211,7 @@ jobs:
 
           if (timelineItem["type"] == "ConnectedEvent"):
             pullRequest = timelineItem["subject"]
-          elif (pullRequest["type"] == "CrossReferencedEvent"):
+          elif (timelineItem["type"] == "CrossReferencedEvent"):
 
             if (timelineItem["target"]["type"] == "PullRequest"):
               pullRequest = timelineItem["target"]
