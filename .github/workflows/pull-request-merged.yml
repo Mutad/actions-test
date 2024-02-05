@@ -12,8 +12,7 @@ jobs:
     # only run if PR is merged and target branch is staging (or if manually triggered)
     # if: github.event.pull_request.merged == true && (github.event.pull_request.base.ref == 'main' || github.event.pull_request.base.ref == 'staging')
 
-    permissions:
-      issues: write
+    permissions: write-all
       
     runs-on: ubuntu-latest
     # give the workflow access to the projectv2 API
@@ -28,6 +27,7 @@ jobs:
           app-id: 787639
           # App private key stored in repo secrets
           private-key: ${{ secrets.APP_KEY }}
+          owner: ${{ github.repository_owner }}
 
       # Get details about the issue that was closed
       - name: Get Cards Linked to Issue
@@ -66,10 +66,11 @@ jobs:
                     url
                   }
                 }
-                timelineItems (last: 1 itemTypes: CONNECTED_EVENT) {
+                timelineItems (last: 1 itemTypes: [CONNECTED_EVENT,CROSS_REFERENCED_EVENT]) {
                   edges {
                     node {
                       ... on ConnectedEvent {
+                        type: __typename
                         subject {
                           ... on PullRequest {
                             id
@@ -77,6 +78,27 @@ jobs:
                               baseRef {
                                 name
                               }
+                          }
+                        }
+                      }
+                      ... on CrossReferencedEvent {
+                        type: __typename
+                        target {
+                          type:__typename
+                          ... on PullRequest {
+                            merged
+                            baseRef {
+                              name
+                            }
+                          }
+                        }
+                        source {
+                          type:__typename
+                          ... on PullRequest {
+                            merged
+                            baseRef {
+                              name
+                            }
                           }
                         }
                       }
@@ -170,7 +192,7 @@ jobs:
                 },
                 {
                   "type": "mrkdwn",
-                  "text": "*Linked Branch:*\n${{ github.event.pull_request.head.ref }}"
+                  "text": "*Linked Branch:*\n${{ github.event.issue.pull_request.head.ref }}"
                 },
                 {
                   "type": "mrkdwn",
@@ -184,7 +206,27 @@ jobs:
             print("Issue has no linked PR, not moving cards")
             exit(0)
 
-          isMerged = issue["timelineItems"]["edges"][0]["node"]["subject"]["merged"]
+          # get PR
+          timelineItem = issue["timelineItems"]["edges"][0]["node"]
+
+          if (timelineItem["type"] == "ConnectedEvent"):
+            pullRequest = timelineItem["subject"]
+          elif (pullRequest["type"] == "CrossReferencedEvent"):
+
+            if (timelineItem["target"]["type"] == "PullRequest"):
+              pullRequest = timelineItem["target"]
+            elif (timelineItem["source"]["type"] == "PullRequest"):
+              pullRequest = timelineItem["source"]
+            else:
+              print("Issue has no linked PR, not moving cards")
+              exit(0)
+
+          else:
+            print("PR is not merged, not moving cards")
+            exit(0)
+
+
+          isMerged = pullRequest["merged"]
           print("isMerged=" + str(isMerged))
 
           # if PR is not merged, don't move cards
@@ -193,11 +235,7 @@ jobs:
             exit(0)
 
           # get merge target branch
-          targetBranch = issue["timelineItems"]["edges"][0]["node"]["subject"]["baseRef"]["name"]
-
-          if (targetBranch != "staging" and targetBranch != "main"):
-            print("PR is not merged into staging or main, not moving cards")
-            exit(0)
+          targetBranch = pullRequest["baseRef"]["name"]
 
           for projectItem in issue["projectItems"]["edges"]:
             project_id = projectItem["node"]["project"]["id"]
