@@ -1,52 +1,103 @@
 name: Pull Request Merged
 on:
-  pull_request:
+  issues:
     types: [closed]
+  workflow_dispatch:
+    inputs:
+      issue_id:
+        description: "Issue Number"
+        required: true
 jobs:
   move-issue-card:
-    # only run if PR is merged and target branch is staging
-    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'staging'
-    permissions:
-      issues: write
-      repository-projects: write
+    # only run if PR is merged and target branch is staging (or if manually triggered)
+    # if: github.event.pull_request.merged == true && (github.event.pull_request.base.ref == 'main' || github.event.pull_request.base.ref == 'staging')
+
+    permissions: write-all
+      
     runs-on: ubuntu-latest
+    # give the workflow access to the projectv2 API
     steps:
-      - name: Gather Cards
+      - name: Generate token
+        id: generate-token
+        uses: actions/create-github-app-token@v1
+        with:
+          # To access the projectv2 API, we need to create a GitHub App
+          # because the projectv2 API needs organization permissions
+          # and personal access tokens don't have access to organization permissions
+          app-id: 787639
+          # App private key stored in repo secrets
+          private-key: ${{ secrets.APP_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      # Get details about the issue that was closed
+      - name: Get Cards Linked to Issue
         id: gather-cards
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_ID: ${{ github.event.pull_request.node_id }}
-          INPUT_PR_ID: ${{ github.event.inputs.pr_id }}
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+          ISSUE_ID: ${{ github.event.issue.node_id }}
+          INPUT_ISSUE_ID: ${{ github.event.inputs.issue_id }}
         run: |
-          # if INPUT_PR_ID is set, use that instead of PR_ID
-          if [ -n "$INPUT_PR_ID" ]; then
-            PR_ID=$INPUT_PR_ID
+          # if INPUT_ISSUE_ID is set, use that instead of ISSUE_ID
+          if [ -n "$INPUT_ISSUE_ID" ]; then
+            # ISSUE_ID is given, get the ISSUE node id from the ISSUE number
+            ISSUE_ID="$( gh api graphql -f query='
+            query {
+              repository(owner: "'"$GITHUB_REPOSITORY_OWNER"'", name: "'"${{github.event.repository.name}}"'") {
+                issue(number: '"$INPUT_ISSUE_ID"') {
+                  id
+                }
+              }
+            }' --jq '.data.repository.issue.id' )"
           fi
 
-          issues="$( gh api graphql -f query='
+          echo "Status column: $STATUS_COLUMN"
+
+          issue="$( gh api graphql -f query='
           query {
-            node (id: "'$PR_ID'") {
-              ... on PullRequest {
-                closingIssuesReferences(first: 10) {
+            node(id: "'"$ISSUE_ID"'") {
+              ... on Issue {
+                id
+                number
+                title
+                url
+                assignees(first: 100) {
+                  nodes {
+                    login
+                    url
+                  }
+                }
+                timelineItems (last: 1 itemTypes: [CONNECTED_EVENT,CROSS_REFERENCED_EVENT]) {
                   edges {
                     node {
-                      ... on Issue {
-                        id
-                        projectCards(first: 100) {
-                          nodes {
-                            ... on ProjectCard {
-                              id
-                              project {
-                                id
+                      ... on ConnectedEvent {
+                        type: __typename
+                        subject {
+                          ... on PullRequest {
+                            id
+                            merged
+                              baseRef {
                                 name
-                                columns (first: 100) {
-                                  nodes {
-                                    id
-                                    databaseId
-                                    name
-                                  }
-                                }
                               }
+                          }
+                        }
+                      }
+                      ... on CrossReferencedEvent {
+                        type: __typename
+                        target {
+                          type:__typename
+                          ... on PullRequest {
+                            merged
+                            baseRef {
+                              name
+                            }
+                          }
+                        }
+                        source {
+                          type:__typename
+                          ... on PullRequest {
+                            merged
+                            baseRef {
+                              name
                             }
                           }
                         }
@@ -54,18 +105,55 @@ jobs:
                     }
                   }
                 }
+                projectItems(first: 100) {
+                  edges {
+                    node {
+                      project {
+                        id
+                        title
+                        field(name: "Status") {
+                          ... on ProjectV2SingleSelectField {
+                            id
+                            production: options(names: "Production") {
+                              id
+                              name
+                            }
+                            staging: options(names: "Staging") {
+                              id
+                              name
+                            }
+                          }
+                        }
+                      }
+                      id
+                      title: fieldValueByName(name: "Title") {
+                        ... on ProjectV2ItemFieldTextValue {
+                          text
+                        }
+                      }
+                      status: fieldValueByName(name: "Status") {
+                        ... on ProjectV2ItemFieldSingleSelectValue {
+                          id
+                          optionId
+                        }
+                      }
+                    }
+                  }
+                }
               }
             }
-          }' --jq '.data.node.closingIssuesReferences.edges')"
-          echo "issues=$issues" >> $GITHUB_OUTPUT
+          }' --jq '.data.node' )"
+          echo "issue=$issue" >> $GITHUB_OUTPUT
       - name: Move Cards
         id: move-cards
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+          ISSUE: ${{ steps.gather-cards.outputs.issue }}
         shell: python
         run: |
           import requests
           import os
+          import json
 
           token = os.environ['GH_TOKEN']
           headers = {"Authorization": "Bearer " + token}
@@ -75,28 +163,147 @@ jobs:
                 return request.json()
             else:
                 raise Exception("Query failed to run by returning code of {}. {}".format(request.status_code, query))
-          issues = ${{ steps.gather-cards.outputs.issues }}
-          for issue in issues:
-            issue_id = issue["node"]["id"]
-            print("Found linked issue: " + issue_id)
-            for projectCard in issue["node"]["projectCards"]["nodes"]:
-              project_id = projectCard["project"]["id"]
-              project_name = projectCard["project"]["name"]
-              print("Issue linked to project: " + project_name)
-              # find the column named "Done"
-              for column in projectCard["project"]["columns"]["nodes"]:
-                if column["name"] == "Done":
-                  column_id = column["id"]
-                  column_db_id = column["databaseId"]
-                  print("Moving card to column: " + column["name"] + " " + column_id)
-                  # move the card to the "Done" column
-                  query = """
-                  mutation {
-                      moveProjectCard(input: {cardId: "%s" columnId: "%s"}) {
-                      clientMutationId
-                    }
+          
+          # get issue from env and parse json
+          issue = json.loads(os.environ['ISSUE'])
+          print("issue=" + str(issue))
+          slack_messages = [
+            {
+              "type": "section",
+              "text": {
+                "type": "mrkdwn",
+                "text": "*New issue ready for QA!*"
+              }
+            },
+            {
+              "type": "section",
+              "fields": [
+                {
+                  "type": "mrkdwn",
+                  "text": "*Issue:*\n<${{ github.event.issue.html_url }}|${{ github.event.issue.title }}>"
+                },
+                {
+                  "type": "mrkdwn",
+                  "text": "*Repository:*\n<${{ github.event.repository.html_url }}|${{ github.event.repository.full_name }}>"
+                },
+                {
+                  "type": "mrkdwn",
+                  "text": "*Opened By:*\n<${{ github.event.issue.user.html_url }}|${{ github.event.issue.user.login }}>"
+                },
+                {
+                  "type": "mrkdwn",
+                  "text": "*Linked Branch:*\n${{ github.event.issue.pull_request.head.ref }}"
+                },
+                {
+                  "type": "mrkdwn",
+                  "text": "*Assignees:*\n${{ join(github.event.issue.assignees.*.login, ', ') }}"
+                }
+              ]
+            },
+          ]
+
+          if (len(issue["timelineItems"]["edges"]) == 0):
+            print("Issue has no linked PR, not moving cards")
+            exit(0)
+
+          # get PR
+          timelineItem = issue["timelineItems"]["edges"][0]["node"]
+
+          if (timelineItem["type"] == "ConnectedEvent"):
+            pullRequest = timelineItem["subject"]
+          elif (timelineItem["type"] == "CrossReferencedEvent"):
+
+            if (timelineItem["target"]["type"] == "PullRequest"):
+              pullRequest = timelineItem["target"]
+            elif (timelineItem["source"]["type"] == "PullRequest"):
+              pullRequest = timelineItem["source"]
+            else:
+              print("Issue has no linked PR, not moving cards")
+              exit(0)
+
+          else:
+            print("PR is not merged, not moving cards")
+            exit(0)
+
+
+          isMerged = pullRequest["merged"]
+          print("isMerged=" + str(isMerged))
+
+          # if PR is not merged, don't move cards
+          if not isMerged:
+            print("PR is not merged, not moving cards")
+            exit(0)
+
+          # get merge target branch
+          targetBranch = pullRequest["baseRef"]["name"]
+
+          for projectItem in issue["projectItems"]["edges"]:
+            project_id = projectItem["node"]["project"]["id"]
+            project_name = projectItem["node"]["project"]["title"]
+
+            # get field value id for the target branch
+            field_value_id = projectItem["node"]["project"]["field"]["staging"][0]["id"] if targetBranch == "staging" else projectItem["node"]["project"]["field"]["production"][0]["id"]
+
+            print("Issue linked to project: " + project_name)
+            item_id = projectItem["node"]["id"]
+            item_field_id = projectItem["node"]["project"]["field"]["id"]
+            # update the project item field value
+            query = """
+            mutation {
+              updateProjectV2ItemFieldValue(
+                input: {
+                  projectId: "%s"
+                  itemId: "%s"
+                  fieldId: "%s"
+                  value: {
+                    singleSelectOptionId: "%s"
                   }
-                  """ % (projectCard["id"], column_id)
-                  print("Query: " + query)
-                  result = run_query(query) # Execute the query
-                  print("Result: " + str(result))
+                }
+              ) {
+                clientMutationId
+              }
+            }
+            """ % (project_id, item_id, item_field_id, field_value_id)
+            print("Query: " + query)
+            result = run_query(query) # Execute the query
+            print("Result: " + str(result))
+          
+          # set slack messages to output
+          print(json.dumps(slack_messages))
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+            print("merged=" + str(isMerged), file=f)
+            print("slack_messages=" + json.dumps(slack_messages), file=f)
+      - name: Get QA Channel ID
+        id: get-qa-channel-id
+        if: steps.move-cards.outputs.merged == 'true'
+        env:
+          username_to_channel_id: ${{ vars.USERNAME_TO_CHANNEL_ID }}
+        run: |
+          # get QA channel number
+          for i in $username_to_channel_id; do
+            # USERNAME=CHANNEL_ID
+            USERNAME=$(echo $i | cut -d'=' -f1)
+            CHANNEL_ID=$(echo $i | cut -d'=' -f2)
+            if [ "$USERNAME" == "QA" ]; then
+              QA_CHANNEL_ID=$CHANNEL_ID
+            fi
+          done
+          # output QA channel id
+          echo "QA channel id: $QA_CHANNEL_ID"
+          echo "QA_CHANNEL_ID=$QA_CHANNEL_ID" >> $GITHUB_OUTPUT
+      - name: Slack Notification
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          slack_messages: ${{ steps.move-cards.outputs.slack_messages }}
+        # run only if QA channel id is set
+        if: steps.get-qa-channel-id.outputs.QA_CHANNEL_ID != ''
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          channel-id: ${{ steps.get-qa-channel-id.outputs.QA_CHANNEL_ID }}
+          payload: |
+            {
+              "unfurl_links": false,
+              "unfurl_media": false,
+              "text": "New PR ready for QA!",
+              "blocks": ${{ steps.move-cards.outputs.slack_messages }}
+            }
